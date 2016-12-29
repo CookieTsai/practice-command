@@ -1,0 +1,33 @@
+#!/bin/bash
+
+function getStop() {
+    ANS=$(($1+$PART_SIZE))
+    if [ "$ANS" -gt "$FILE_SIZE" ]; then
+        echo $FILE_SIZE
+    else
+        echo $ANS
+    fi
+}
+
+function mutiget() {
+    MUTI_SIZE=$1
+    URL=$2
+    FILE_NAME=$3
+
+    INFO=$(curl -I -s $URL)
+    echo $INFO
+
+    FILE_SIZE=$(echo $INFO | perl -ne 'print "$1\n" if /Content-Length:\s*(\d+)/i')
+    PART_SIZE=$(($FILE_SIZE/$MUTI_SIZE))
+
+    export INFO MUTI_SIZE URL FILE_NAME FILE_SIZE PART_SIZE
+
+    START=0
+    for i in `seq 1 $MUTI_SIZE`; do
+        STOP=$(getStop $START)
+        echo "curl -r $START-$STOP -s -o $FILE_NAME-part.$i $URL"
+        curl -r $START-$STOP -s -o $FILE_NAME-part.$i $URL &
+        START=$(($STOP+1))
+        sleep 1
+    done
+}
